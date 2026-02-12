@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using security.Data;
+using security.Services;
 
 namespace security
 {
@@ -12,8 +14,19 @@ namespace security
 
             // Add services to the container.
             builder.Services.AddControllersWithViews();
+            builder.Services.AddScoped<IEmailSender, MailJetEmailSender>();
             builder.Services.AddDbContext<SecurityDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("ShopingContext") ?? throw new InvalidOperationException("Connection string 'ShopingContext' not found.")));
-            builder.Services.AddIdentity<IdentityUser, IdentityRole>().AddEntityFrameworkStores<SecurityDbContext>();
+            builder.Services.AddIdentity<IdentityUser, IdentityRole>()
+                .AddEntityFrameworkStores<SecurityDbContext>()
+                .AddDefaultTokenProviders(); 
+            builder.Services.Configure<IdentityOptions>(opt =>
+            {
+                opt.Password.RequiredLength = 17;
+                opt.Lockout.MaxFailedAccessAttempts = 3;
+                opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(2);
+            }   
+                 
+            ); ; 
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
