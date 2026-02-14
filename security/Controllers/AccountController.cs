@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using security.Models;
+using System.Security.Claims;
 
 namespace security.Controllers
 {
@@ -119,11 +120,73 @@ namespace security.Controllers
         }
 
         [HttpGet]
-        public IActionResult  Login(string returnurl=null)
+        public async Task<IActionResult> Login(string returnurl=null)
         {
             ViewData["Returnurl"] = returnurl;
+
+            var schemes = await signInManager.GetExternalAuthenticationSchemesAsync();
+            ViewBag.ExternalLogins = schemes.ToList();
             return View();
         }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult ExternalLogin(string provider, string returnUrl = null)
+        {
+            var redirectUrl = Url.Action("ExternalLoginCallback", "Account",
+                new { returnUrl });
+
+            var properties = signInManager.ConfigureExternalAuthenticationProperties(
+                provider, redirectUrl);
+
+            return Challenge(properties, provider);
+        }
+        public async Task<IActionResult> ExternalLoginCallback(string returnUrl = null, string remoteError = null)
+        {
+            returnUrl ??= Url.Content("~/");
+
+            if (remoteError != null)
+            {
+                ModelState.AddModelError("", $"Error from external provider: {remoteError}");
+                return RedirectToAction(nameof(Login));
+            }
+
+            var info = await signInManager.GetExternalLoginInfoAsync();
+            if (info == null)
+                return RedirectToAction(nameof(Login));
+
+            var result = await signInManager.ExternalLoginSignInAsync(
+                info.LoginProvider,
+                info.ProviderKey,
+                isPersistent: false,
+                bypassTwoFactor: true);
+
+            if (result.Succeeded)
+                return LocalRedirect(returnUrl);
+
+            // user does not exist yet → create it
+            var email = info.Principal.FindFirstValue(System.Security.Claims.ClaimTypes.Email);
+
+            var user = new ApplicationUser
+            {
+                UserName = email,
+                Email = email
+            };
+
+            var createResult = await userManager.CreateAsync(user);
+
+            if (!createResult.Succeeded)
+            {
+                AddErrors(createResult);
+                return RedirectToAction(nameof(Login));
+            }
+
+            await userManager.AddLoginAsync(user, info);
+            await signInManager.SignInAsync(user, isPersistent: false);
+
+            return LocalRedirect(returnUrl);
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model,string returnurl=null)

@@ -18,7 +18,14 @@ namespace security
             builder.Services.AddDbContext<SecurityDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("ShopingContext") ?? throw new InvalidOperationException("Connection string 'ShopingContext' not found.")));
             builder.Services.AddIdentity<IdentityUser, IdentityRole>()
                 .AddEntityFrameworkStores<SecurityDbContext>()
-                .AddDefaultTokenProviders(); 
+                .AddDefaultTokenProviders();
+            builder.Services
+            .AddAuthentication()
+            .AddGoogle(options =>
+            {
+                options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
+                options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
+            });
             builder.Services.Configure<IdentityOptions>(opt =>
             {
                 opt.Password.RequiredLength = 17;
