@@ -10,14 +10,16 @@ namespace security.Controllers
     public class AccountController : Controller
     {
         private readonly UserManager<IdentityUser> userManager;
+        private readonly RoleManager<IdentityRole> roleManager;
         private readonly SignInManager<IdentityUser> signInManager;
         private readonly IEmailSender emailSender;
 
-        public AccountController(UserManager<IdentityUser> userManager,SignInManager<IdentityUser> signInManager, IEmailSender emailSender)
+        public AccountController(UserManager<IdentityUser> userManager,SignInManager<IdentityUser> signInManager, IEmailSender emailSender,RoleManager<IdentityRole> roleManager)
         {
             this.userManager = userManager;
             this.signInManager = signInManager;
             this.emailSender = emailSender;
+            this.roleManager = roleManager;
         }       
 
         public IActionResult Index()
@@ -29,6 +31,11 @@ namespace security.Controllers
         {
             ViewData["Returnurl"] = returnurl;
             returnurl = returnurl ?? Url.Content("~/");
+            if(! await roleManager.RoleExistsAsync("admin"))
+            {
+                await roleManager.CreateAsync(new IdentityRole("Admin"));
+                await roleManager.CreateAsync(new IdentityRole("Operator"));
+            }
             RegisterViewModel registerViewModel = new RegisterViewModel();
             return View(registerViewModel);
         }
