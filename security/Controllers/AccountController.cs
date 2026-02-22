@@ -1,9 +1,12 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using security.Models;
 using System.Security.Claims;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 
 namespace security.Controllers
 {
@@ -27,22 +30,41 @@ namespace security.Controllers
             return View();
         }
         [HttpGet]
+        [AllowAnonymous] 
         public async Task<IActionResult> Register(string returnurl=null)
         {
-            ViewData["Returnurl"] = returnurl;
-            returnurl = returnurl ?? Url.Content("~/");
-            if(! await roleManager.RoleExistsAsync("admin"))
+          
+            if(! await roleManager.RoleExistsAsync("Admin"))
             {
                 await roleManager.CreateAsync(new IdentityRole("Admin"));
                 await roleManager.CreateAsync(new IdentityRole("Operator"));
             }
-            RegisterViewModel registerViewModel = new RegisterViewModel();
+            List<SelectListItem> listItems = new List<SelectListItem>();
+            listItems.Add(new SelectListItem()
+            {
+                Value = "Admin",
+                Text = "Admin",
+            }                
+            );
+            listItems.Add(new SelectListItem()
+            {
+                Value = "Operator",
+                Text = "Operator",
+            }                
+            );
+            ViewData["Returnurl"] = returnurl;
+            returnurl = returnurl ?? Url.Content("~/");
+            RegisterViewModel registerViewModel = new RegisterViewModel()
+            {
+                RoleList = listItems
+            };
+            
             return View(registerViewModel);
         }
 
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Register(RegisterViewModel model,string returnurl )
+        [AllowAnonymous]
+        public async Task<IActionResult> Register(RegisterViewModel model,string? returnurl )
         {
             ViewData["Returnurl"] = returnurl;
             returnurl = returnurl ?? Url.Content("~/");
@@ -51,12 +73,36 @@ namespace security.Controllers
                 var user = new ApplicationUser() { UserName=model.Email, Email = model.Email,Name=model.Name };
                 var result = await userManager.CreateAsync(user,model.Password);
                 if(result.Succeeded)
-                {
+                { 
+                    if(model.RoleSelected != null && model.RoleSelected.Length>0 && model.RoleSelected=="Admin")
+                    {
+                        await userManager.AddToRoleAsync(user,"Admin");
+                    }
+                    else
+                    {
+                        await userManager.AddToRoleAsync(user, "Operator");
+
+                    }
                     await signInManager.SignInAsync(user, isPersistent: false);
                     return LocalRedirect(returnurl);
                 }
                 AddErrors(result);
+                
             }
+            List<SelectListItem> listItems = new List<SelectListItem>();
+            listItems.Add(new SelectListItem()
+            {
+                Value = "Admin",
+                Text = "Admin",
+            }
+            );
+            listItems.Add(new SelectListItem()
+            {
+                Value = "Operator",
+                Text = "Operator",
+            }
+            );
+            model.RoleList = listItems;
             return View(model);
         }
 

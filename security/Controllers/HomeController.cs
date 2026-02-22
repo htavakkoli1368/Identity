@@ -18,8 +18,12 @@ namespace security.Controllers
         { 
             return View();
         }
-        [Authorize]
+        [Authorize(Roles ="Admin")]
         public IActionResult Privacy()
+        {
+            return View();
+        }
+        public IActionResult AccessDenied ()
         {
             return View();
         }

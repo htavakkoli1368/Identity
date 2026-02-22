@@ -28,12 +28,16 @@ namespace security
             });
             builder.Services.Configure<IdentityOptions>(opt =>
             {
-                opt.Password.RequiredLength = 17;
+                opt.Password.RequiredLength = 6;
                 opt.Lockout.MaxFailedAccessAttempts = 3;
                 opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(2);
             }   
                  
-            ); ; 
+            ); ;
+            builder.Services.ConfigureApplicationCookie(opt =>
+            {
+                opt.AccessDeniedPath = new PathString("/Home/Accessdenied");
+            });
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
