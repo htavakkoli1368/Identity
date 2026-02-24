@@ -16,9 +16,18 @@ namespace security
             builder.Services.AddControllersWithViews();
             builder.Services.AddScoped<IEmailSender, MailJetEmailSender>();
             builder.Services.AddDbContext<SecurityDbContext>(options => options.UseSqlServer(builder.Configuration.GetConnectionString("ShopingContext") ?? throw new InvalidOperationException("Connection string 'ShopingContext' not found.")));
-            builder.Services.AddIdentity<IdentityUser, IdentityRole>()
+
+            //builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true).AddEntityFrameworkStores<SecurityDbContext>();
+            builder.Services.AddIdentity<IdentityUser, IdentityRole>(opt=>
+            {
+                opt.Password.RequiredLength = 6;
+                opt.Lockout.MaxFailedAccessAttempts = 3;
+                opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(2);
+            }
+            )
                 .AddEntityFrameworkStores<SecurityDbContext>()
                 .AddDefaultTokenProviders();
+            builder.Services.AddRazorPages();
             builder.Services
             .AddAuthentication()
             .AddGoogle(options =>
@@ -26,14 +35,14 @@ namespace security
                 options.ClientId = builder.Configuration["Authentication:Google:ClientId"];
                 options.ClientSecret = builder.Configuration["Authentication:Google:ClientSecret"];
             });
-            builder.Services.Configure<IdentityOptions>(opt =>
-            {
-                opt.Password.RequiredLength = 6;
-                opt.Lockout.MaxFailedAccessAttempts = 3;
-                opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(2);
-            }   
+            //builder.Services.Configure<IdentityOptions>(opt =>
+            //{
+            //    opt.Password.RequiredLength = 6;
+            //    opt.Lockout.MaxFailedAccessAttempts = 3;
+            //    opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(2);
+            //}   
                  
-            ); ;
+            //); 
             builder.Services.ConfigureApplicationCookie(opt =>
             {
                 opt.AccessDeniedPath = new PathString("/Home/Accessdenied");
@@ -54,9 +63,10 @@ namespace security
             app.UseAuthorization();
 
             app.MapStaticAssets();
+            app.MapRazorPages();
             app.MapControllerRoute(
                 name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}")
+                pattern: "{controller=Home}/{action=Index}/{id?}")               
                 .WithStaticAssets();
 
             app.Run();
